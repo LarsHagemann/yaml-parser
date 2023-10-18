@@ -337,3 +337,38 @@ RootObject:
         REQUIRE(value["RootObject"]["ChildObject2"]["ChildString2"].AsString() == "Hello, World!");
     }
 }
+
+TEST_CASE("Server example from the README") {
+    const auto complexString = R"(
+Server:
+    AllowedClients:
+        Ips:
+            - "127.0.0.1"
+            - "168.0.0.1"
+            - "localhost"
+    NumberOfCores: 4
+    CorsPolicy: 
+        - "https://example.com"
+        - "https://example.org"    
+    )";
+
+    const auto complexTemplate = YamlNamed("Server", YamlObject({
+        new YamlNamed("AllowedClients", YamlObject({
+            new YamlNamed("Ips", YamlList(YamlString()))
+        })),
+        new YamlNamed("NumberOfCores", YamlInt<8>()),
+        new YamlNamed("CorsPolicy", YamlList(YamlString()))
+    }));
+
+    SECTION("Server example from the README") {
+        auto value = YamlParse(complexTemplate, complexString);
+        REQUIRE(value["Server"]["AllowedClients"]["Ips"].AsList().size() == 3);
+        REQUIRE(value["Server"]["AllowedClients"]["Ips"][0].AsString() == "127.0.0.1");
+        REQUIRE(value["Server"]["AllowedClients"]["Ips"][1].AsString() == "168.0.0.1");
+        REQUIRE(value["Server"]["AllowedClients"]["Ips"][2].AsString() == "localhost");
+        REQUIRE(value["Server"]["NumberOfCores"].AsInt8() == 4);
+        REQUIRE(value["Server"]["CorsPolicy"].AsList().size() == 2);
+        REQUIRE(value["Server"]["CorsPolicy"][0].AsString() == "https://example.com");
+        REQUIRE(value["Server"]["CorsPolicy"][1].AsString() == "https://example.org");
+    }
+}
