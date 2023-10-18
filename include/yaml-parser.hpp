@@ -10,7 +10,9 @@
 #include <optional>
 #include <functional>
 #include <stdexcept>
+#ifdef YAML_PARSER_ENABLE_FORMAT_LIB
 #include <format>
+#endif
 #include <filesystem>
 #include <fstream>
 
@@ -26,11 +28,15 @@ public:
 
     YamlError(uint32_t line, uint64_t column, const std::string& message)
         : m_Line(line), m_Column(column), m_Message(message) {
-        
+
+#ifdef YAML_PARSER_ENABLE_FORMAT_LIB
         m_error = std::format(
             "Yaml error at line {}, column {}: {}",
             m_Line + 1, m_Column, m_Message
         );
+#else
+        m_error = "Yaml error at line " + std::to_string(m_Line + 1) + ", column " + std::to_string(m_Column) + ": " + m_Message;
+#endif
     }
 
     const char* what() const noexcept override {
@@ -206,7 +212,11 @@ public:
                 return makeIdentifier();
             }
             else {
+#ifdef YAML_PARSER_ENABLE_FORMAT_LIB
                 throw YamlError(m_Line, m_Offset - m_LineOffset, std::format("Unexpected character '{}'", c));
+#else
+                throw YamlError(m_Line, m_Offset - m_LineOffset, "Unexpected character '" + std::string(1, c) + "'");
+#endif
             }
         }
     }
@@ -217,7 +227,11 @@ namespace detail {
 static YamlToken ExpectTokenType(YamlTokenType type, YamlScanner& scanner) {
     auto token = scanner.scan();
     if (token.Type != type) {
+#ifdef YAML_PARSER_ENABLE_FORMAT_LIB
         throw YamlError(scanner.line(), scanner.columnBegin(), std::format("Expected token type {}, got {}", static_cast<int32_t>(type), static_cast<int32_t>(token.Type)));
+#else
+        throw YamlError(scanner.line(), scanner.columnBegin(), "Expected token type " + std::to_string(static_cast<int32_t>(type)) + ", got " + std::to_string(static_cast<int32_t>(token.Type)));
+#endif
     }
     return token;
 }
@@ -310,7 +324,11 @@ public:
     YamlValue Parse(YamlScanner& scanner) const {
         auto token = scanner.scan();
         if (token.Type != YamlTokenType::YAML_IDENTIFIER && token.Type != YamlTokenType::YAML_STRING) {
+#ifdef YAML_PARSER_ENABLE_FORMAT_LIB
             throw YamlError(scanner.line(), scanner.columnBegin(), std::format("Expected string, got {}", token.Lexeme));
+#else
+            throw YamlError(scanner.line(), scanner.columnBegin(), "Expected string, got " + token.Lexeme);
+#endif
         }
         const auto lexeme = detail::ToLowerCase(token.Lexeme);
         for (auto& value : Values) {
@@ -323,7 +341,11 @@ public:
             oneOf += Values[i] + ", ";
         }
         oneOf += Values[Values.size() - 1] + "]";
+#ifdef YAML_PARSER_ENABLE_FORMAT_LIB
         throw YamlError(scanner.line(), scanner.columnBegin(), std::format("Expected one of {}, got {}", oneOf, token.Lexeme));
+#else
+        throw YamlError(scanner.line(), scanner.columnBegin(), "Expected one of " + oneOf + ", got " + token.Lexeme);
+#endif
     }
 };
 
@@ -548,7 +570,11 @@ public:
             return false;
         }
         else {
+#ifdef YAML_PARSER_ENABLE_FORMAT_LIB
             throw YamlError(scanner.line(), scanner.columnBegin(), std::format("Expected boolean value, got {}", token.Lexeme));
+#else
+            throw YamlError(scanner.line(), scanner.columnBegin(), "Expected boolean value, got " + token.Lexeme);
+#endif
         }
     }
 };
@@ -589,7 +615,11 @@ inline YamlValue YamlObjectParser::Parse(YamlScanner& scanner) const {
            }
         }
         if (!itemFound) {
+#ifdef YAML_PARSER_ENABLE_FORMAT_LIB
             throw YamlError(scanner.line(), scanner.columnBegin(), std::format("Unexpected identifier {}", identifier.Lexeme));
+#else
+            throw YamlError(scanner.line(), scanner.columnBegin(), "Unexpected identifier " + identifier.Lexeme);
+#endif
         }
     }
 
@@ -597,10 +627,18 @@ inline YamlValue YamlObjectParser::Parse(YamlScanner& scanner) const {
         auto& item = (*Items)[i];
         auto it = parsedItems.find(item->Name);
         if (it == parsedItems.end() && !item->Optional) {
+#ifdef YAML_PARSER_ENABLE_FORMAT_LIB
             throw YamlError(scanner.line(), scanner.columnBegin(), std::format("Missing identifier {}", item->Name));
+#else
+            throw YamlError(scanner.line(), scanner.columnBegin(), "Missing identifier " + item->Name);
+#endif
         }
         else if (it != parsedItems.end() && it->second > 1) {
+#ifdef YAML_PARSER_ENABLE_FORMAT_LIB
             throw YamlError(scanner.line(), scanner.columnBegin(), std::format("Duplicate identifier {}", item->Name));
+#else
+            throw YamlError(scanner.line(), scanner.columnBegin(), "Duplicate identifier " + item->Name);
+#endif
         }
     }
 
@@ -634,7 +672,11 @@ static YamlValue YamlParse(const YamlNamed& yamlTemplate, const std::string& yam
     detail::ExpectTokenType(YamlTokenType::YAML_COLON, scanner);
 
     if (identifier.Lexeme != yamlTemplate.Name) {
+#ifdef YAML_PARSER_ENABLE_FORMAT_LIB
         throw YamlError(scanner.line(), scanner.columnBegin(), std::format("Expected identifier {}, got {}", yamlTemplate.Name, identifier.Lexeme));
+#else
+        throw YamlError(scanner.line(), scanner.columnBegin(), "Expected identifier " + yamlTemplate.Name + ", got " + identifier.Lexeme);
+#endif
     }
 
     std::unordered_map<std::string, YamlValue> root;
@@ -647,7 +689,11 @@ static YamlValue YamlParse(const YamlNamed& yamlTemplate, const std::string& yam
 static YamlValue YamlParseFile(const YamlNamed& yamlTemplate, const std::filesystem::path& filepath) {
     std::ifstream stream(filepath);
     if (!stream.is_open()) {
+#ifdef YAML_PARSER_ENABLE_FORMAT_LIB
         throw std::runtime_error(std::format("Could not open file {}", filepath.string()));
+#else
+        throw std::runtime_error("Could not open file " + filepath.string());
+#endif
     }
     return YamlParse(yamlTemplate, std::string(
         std::istreambuf_iterator<char>(stream), 

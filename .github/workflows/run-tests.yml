@@ -1,0 +1,54 @@
+name: CI/CD
+
+on: [push, workflow_dispatch]
+
+env:
+  # Debug or Release
+  BUILD_TYPE: Release
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: egor-tensin/setup-gcc@v1.3
+      with:
+        version: latest
+        platform: x64
+    
+    - uses: actions/checkout@v4
+      with:
+        submodules: true
+
+    - if: always()
+      name: Cache build artifacts
+      id: build-cache
+      uses: actions/cache@v3
+      env:
+        cache-name: cache-build-artifacts
+      with:
+        path: ./build/
+        key: ${{ runner.os }}-build-${{ env.cache-name }}
+        restore-keys: |
+          ${{ runner.os }}-build-${{ env.cache-name }}
+          ${{ runner.os }}-build-
+          ${{ runner.os }}-
+
+    - name: Install dependencies
+      run: |
+        git submodule init
+
+    - name: Configure
+      run: |
+        mkdir -p build
+        cmake -B build/ -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+
+    - name: Build
+      run: |
+        mkdir -p build/install
+        cmake --build build/ --config ${{env.BUILD_TYPE}}
+        cmake --install build/ --prefix ./build/install
+
+    - name: Run
+      run: |
+        cd ./build/install/bin
+        ./yaml-parser-tests

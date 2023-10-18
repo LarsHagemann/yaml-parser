@@ -19,3 +19,10 @@ target_include_directories(
     PRIVATE 
     ${CMAKE_CURRENT_SOURCE_DIR}/Catch2/src/
     ${CMAKE_CURRENT_SOURCE_DIR}/include/)
+
+if (YAML_PARSER_ENABLE_FORMAT_LIB)
+    target_compile_definitions(
+        yaml-parser-tests 
+        PRIVATE 
+        YAML_PARSER_ENABLE_FORMAT_LIB)
+endif()
