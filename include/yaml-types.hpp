@@ -7,8 +7,15 @@
 #include <vector>
 #include <unordered_map>
 #include <stdexcept>
+#include <iostream>
 
 namespace yaml {
+
+struct WriteConfig {
+    uint32_t Indentation = 2u;
+    uint32_t CurrentIndentation = 0u;
+    bool     SkipFirstIndentation = false;
+};
 
 class YamlValue {
 private:
@@ -137,7 +144,91 @@ public:
     bool HasKey(const std::string& key) const {
         return AsObject().find(key) != AsObject().end();
     }
+
+    void Write(std::ostream& stream, WriteConfig config = {}) const {
+        if (m_Value.index() == 0) {
+            stream << std::boolalpha << std::get<bool>(m_Value);
+        }
+        else if (m_Value.index() == 1) {
+            stream << std::get<int8_t>(m_Value);
+        }
+        else if (m_Value.index() == 2) {
+            stream << std::get<int16_t>(m_Value);
+        }
+        else if (m_Value.index() == 3) {
+            stream << std::get<int32_t>(m_Value);
+        }
+        else if (m_Value.index() == 4) {
+            stream << std::get<int64_t>(m_Value);
+        }
+        else if (m_Value.index() == 5) {
+            stream << std::get<uint8_t>(m_Value);
+        }
+        else if (m_Value.index() == 6) {
+            stream << std::get<uint16_t>(m_Value);
+        }
+        else if (m_Value.index() == 7) {
+            stream << std::get<uint32_t>(m_Value);
+        }
+        else if (m_Value.index() == 8) {
+            stream << std::get<uint64_t>(m_Value);
+        }
+        else if (m_Value.index() == 9) {
+            stream << std::get<float>(m_Value);
+        }
+        else if (m_Value.index() == 10) {
+            stream << std::get<double>(m_Value);
+        }
+        else if (m_Value.index() == 11) {
+            stream << '"' << std::get<std::string>(m_Value) << '"';
+        }
+        else if (m_Value.index() == 12) {
+            stream << '\n';
+            config.SkipFirstIndentation = true;
+            for (const auto& value : AsList()) {
+                stream << std::string(config.CurrentIndentation, ' ') << "- ";
+                config.CurrentIndentation += config.Indentation;
+                value.Write(stream, config);
+                config.CurrentIndentation -= config.Indentation;
+                stream << '\n';
+            }
+            config.SkipFirstIndentation = false;
+        }
+        else if (m_Value.index() == 13) {
+            auto i = 0ull;
+            for (const auto& [key, value] : AsObject()) {
+                if (!config.SkipFirstIndentation || i != 0) {
+                    stream << std::string(config.CurrentIndentation, ' ');
+                }
+                stream << key << ": ";
+                config.CurrentIndentation += config.Indentation;
+                value.Write(stream, config);
+                config.CurrentIndentation -= config.Indentation;
+                stream << '\n';
+                ++i;
+            }
+        }
+    }
 };
+
+namespace types {
+
+using Bool     = bool;
+using Int8     = int8_t;
+using Int16    = int16_t;
+using Int32    = int32_t;
+using Int64    = int64_t;
+using UInt8    = uint8_t;
+using UInt16   = uint16_t;
+using UInt32   = uint32_t;
+using UInt64   = uint64_t;
+using Float    = float;
+using Double   = double;
+using String   = std::string;
+using List     = std::vector<YamlValue>;
+using Object   = std::unordered_map<std::string, YamlValue>;
+
+}
 
 }
 

@@ -8,7 +8,8 @@ add_subdirectory(Catch2/)
 
 add_executable(
     yaml-parser-tests 
-    test/test.cpp
+    test/test-parsing.cpp
+    test/test-writing.cpp
 )
 target_link_libraries(
     yaml-parser-tests 

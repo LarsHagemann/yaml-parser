@@ -18,7 +18,7 @@
 
 namespace yaml {
 
-class YamlError : std::exception {
+class YamlError : public std::exception {
 private:
     std::string m_error;
 public:
