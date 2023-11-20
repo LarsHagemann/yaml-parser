@@ -27,7 +27,10 @@ public:
     uint64_t    m_Column;
 
     YamlError(uint32_t line, uint64_t column, const std::string& message)
-        : m_Line(line), m_Column(column), m_Message(message) {
+        : m_Message(message) 
+        , m_Line(line)
+        , m_Column(column)
+  {
 
 #ifdef YAML_PARSER_ENABLE_FORMAT_LIB
         m_error = std::format(
@@ -183,7 +186,7 @@ public:
         skipWhitespace();
 
         if (eof()) {
-            return { YamlTokenType::YAML_EOF, "" };
+            return makeToken(YamlTokenType::YAML_EOF);
         }
 
         auto c = advance();
@@ -455,10 +458,14 @@ public:
 class YamlNamed {
 public:
     YamlNamed(const std::string& name, YamlItem&& item, bool optional = false)
-        : Name(name), Item(std::make_unique<YamlItem>(std::forward<YamlItem>(item))), Optional(optional) {} 
+        : Item(std::make_unique<YamlItem>(std::forward<YamlItem>(item))) 
+        , Name(name) 
+        , Optional(optional) {} 
 
     YamlNamed(YamlNamed&& other)
-        : Name(std::move(other.Name)), Item(std::move(other.Item)) {}
+        : Item(std::move(other.Item)) 
+        , Name(std::move(other.Name))
+    {}
 
     std::unique_ptr<YamlItem> Item;
     std::string               Name;
